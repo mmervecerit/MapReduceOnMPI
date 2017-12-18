@@ -4,7 +4,10 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <set>
 #include <cstring>
+#include <algorithm>
+#include <stdlib.h>
 using namespace std;
 
 #define WORKTAG     1
@@ -12,7 +15,16 @@ using namespace std;
 typedef struct{
   int howmany;
   char word[1024];
+	
 }my_pair;
+int my_compare (const void * a, const void * b)
+{
+	if(strcmp((((my_pair*)a)->word),(((my_pair*)b)->word))<0) return -1;
+	else if(strcmp((((my_pair*)a)->word),(((my_pair*)b)->word))>0) return 1;
+	else return 0;
+}
+
+ 
 int main (){
 	MPI::Init(); 
 
@@ -37,6 +49,7 @@ int main (){
 	if(rank==0){
 	int size;
 	ifstream infile;
+	ofstream myfile;
 	infile.open("speech_tokenized.txt");
     	string token;
 	MPI_Comm_size(MPI_COMM_WORLD,&size); 
@@ -105,6 +118,28 @@ int main (){
 			
 		}	
 	}
+	vector<my_pair> sorted_pairs;
+	for(int i=1;i<size;i++){
+		for(int j =0; j<howmanylinestosend;j++){
+		my_pair putthis;
+		MPI_Recv(&putthis,1,mWord,i,HOPTAG,MPI_COMM_WORLD,&status);
+		sorted_pairs.push_back(putthis);
+		}
+	}
+
+
+	my_pair arraytosort[numoflines];
+	int ite=0;
+	for(vector<my_pair>::iterator it = sorted_pairs.begin(); it != sorted_pairs.end(); ++it) {
+		arraytosort[ite]=*it;
+		ite++;		
+	}
+	qsort(arraytosort,numoflines,sizeof(my_pair),my_compare);
+
+	myfile.open("output.txt");
+	for(int i=0;i<numoflines;i++){
+		myfile<<arraytosort[i].word<<" - "<<arraytosort[i].howmany<<endl;
+	}
 	}
 	else{
 		vector<string> received_words;
@@ -131,8 +166,18 @@ int main (){
 			MPI_Recv(&pushit,1,mWord,0,WORKTAG,MPI_COMM_WORLD,&status);
 			my_pairs_came_from_master.push_back(pushit);
 		}
-		//cout<<my_pairs_came_from_master[my_pairs_came_from_master.size()-1].word<<" "<<my_pairs_came_from_master[my_pairs_came_from_master.size()-1].howmany<<endl;
-	
+		my_pair arraytosort[howmanylinestoreceive];
+		int ite=0;
+		for(vector<my_pair>::iterator it = my_pairs_came_from_master.begin(); it != my_pairs_came_from_master.end(); ++it) {
+			arraytosort[ite]=*it;
+			ite++;		
+		}
+		qsort(arraytosort,howmanylinestoreceive,sizeof(my_pair),my_compare);
+		for(int i=0; i<howmanylinestoreceive;i++){
+			my_pair send_to_master;
+			send_to_master = arraytosort[i];
+			MPI_Send(&send_to_master,1,mWord,0,HOPTAG,MPI_COMM_WORLD);		
+		}
 		
 	}
  	MPI_Type_free(&mWord);

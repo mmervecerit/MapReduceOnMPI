@@ -136,9 +136,25 @@ int main (){
 	}
 	qsort(arraytosort,numoflines,sizeof(my_pair),my_compare);
 
+	
+	vector<my_pair> output_vector;
+	output_vector.push_back(arraytosort[0]);
+	for(int i=1;i<numoflines;i++){
+		if(strcmp(arraytosort[i].word, output_vector[output_vector.size()-1].word)==0){
+		output_vector[output_vector.size()-1].howmany+=1;
+		}
+		else{
+		output_vector.push_back(arraytosort[i]);
+		}
+	}
+
+
+
 	myfile.open("output.txt");
-	for(int i=0;i<numoflines;i++){
-		myfile<<arraytosort[i].word<<" - "<<arraytosort[i].howmany<<endl;
+	for(int i=0;i<output_vector.size();i++){
+		if(strlen(output_vector[i].word)!=0){
+		myfile<<output_vector[i].word<<" "<<output_vector[i].howmany<<endl;}
+
 	}
 	}
 	else{
